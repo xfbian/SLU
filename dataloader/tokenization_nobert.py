@@ -9,8 +9,9 @@ from utils import constant
 def convert_by_vocab(vocab, tokens):
     assert isinstance(vocab, dict), 'vocab param should be dict object'
     output = []
+    default = vocab[constant.UNK_TOKEN] if vocab.get(constant.UNK_TOKEN) else None
     for item in tokens:
-        output.append(vocab.get(item, vocab[constant.UNK_TOKEN]))
+        output.append(vocab.get(item, default))
     return output
 
 
@@ -28,19 +29,26 @@ class FullTokenizer(object):
         self.vocab = collections.defaultdict(int)
         self.ic_vocab = collections.defaultdict(int)
         self.sf_vocab = collections.defaultdict(int)
+        self.inv_vocab = dict()
+        self.inv_ic_vocab = dict()
+        self.inv_sf_vocab = dict()
 
     def create_vocab(self, corpus_file, vocab_out, no_pad=False):
         assert os.path.isfile(corpus_file), 'corpus_file %s does not exist' % corpus_file
         with codecs.open(corpus_file, 'r', 'utf-8') as f:
-            for line in f:
+            for idx, line in enumerate(f):
                 u_line = unicode(line.rstrip('\r\n'))
                 words = u_line.split()
 
                 for word in words:
                     if word == constant.UNK_TOKEN:
                         break
-                    if str.isdigit(word):
-                        word = u'0'
+                    try:
+                        # TODO update python3 to solve this problem
+                        if str.isdigit(str(word)):
+                            word = u'0'
+                    except:
+                        pass
                     self.vocab[word] += 1
 
         if no_pad:
@@ -85,7 +93,7 @@ class FullTokenizer(object):
             for word in vocab_tmp:
                 fo.write(word + '\n')
 
-    def load_vocab(self, vocab_file, tag=u'vocab'):
+    def load_vocab(self, vocab_file, tag='vocab'):
 
         assert os.path.isfile(vocab_file), 'vocab_file %s does not exist' % vocab_file
         vocab_list = []
@@ -94,13 +102,13 @@ class FullTokenizer(object):
                 u_line = unicode(line.rstrip('\r\n'))
                 vocab_list.append(u_line)
 
-        if tag == u'vocab':
+        if tag == 'vocab':
             self.vocab = {word: idx for (idx, word) in enumerate(vocab_list)}
             self.inv_vocab = {idx: word for word, idx in self.vocab.items()}
-        elif tag == u'ic_vocab':
+        elif tag == 'ic_vocab':
             self.ic_vocab = {word: idx for (idx, word) in enumerate(vocab_list)}
             self.inv_ic_vocab = {idx: word for word, idx in self.ic_vocab.items()}
-        elif tag == u'sf_vocab':
+        elif tag == 'sf_vocab':
             self.sf_vocab = {word: idx for (idx, word) in enumerate(vocab_list)}
             self.inv_sf_vocab = {idx: word for word, idx in self.sf_vocab.items()}
 
@@ -110,14 +118,14 @@ class FullTokenizer(object):
     def covert_ids_to_tokens(self, ids):
         return convert_by_inv_vocab(self.inv_vocab, ids)
 
-    def convert_iclabels_to_ids(self, iclabels):
-        return convert_by_vocab(self.ic_vocab, iclabels)
+    def convert_ic_labels_to_ids(self, ic_labels):
+        return convert_by_vocab(self.ic_vocab, ic_labels)
 
-    def convert_ids_to_iclabels(self, ids):
+    def convert_ids_to_ic_labels(self, ids):
         return convert_by_inv_vocab(self.inv_ic_vocab, ids)
 
-    def convert_sf_labels_to_ids(self, sflabels):
-        return convert_by_vocab(self.sf_vocab, sflabels)
+    def convert_sf_labels_to_ids(self, sf_labels):
+        return convert_by_vocab(self.sf_vocab, sf_labels)
 
-    def convert_ids_to_sflabels(self, ids):
+    def convert_ids_to_sf_labels(self, ids):
         return convert_by_inv_vocab(self.inv_sf_vocab, ids)
